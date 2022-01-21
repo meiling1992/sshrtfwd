@@ -143,5 +143,28 @@ func SSHRTService(sshsvrep, lep, fwdep EndPoint) error {
 		return err
 	}
 	defer serverConn.Close()
-	return nil
+	// Listen on remote server port
+	listener, err := serverConn.Listen("tcp", fwdep.String())
+	if err != nil {
+		logger.ErrorField("ERROR.SSH", "Listen.MSG", fmt.Sprintf("Listen open port on remote server.error:%s", err))
+		return err
+	}
+	defer listener.Close()
+	// handle incoming connections on reverse forwarded tunnel
+	for {
+		// accept a new tcp session on tunnel
+		client, err := listener.Accept()
+		if err != nil {
+			logger.ErrorField("ERROR.SSH", "Listen.Accept.MSG", fmt.Sprintf("Listen.Accept server.error:%s", err))
+			continue
+		}
+		//
+		local, err := net.Dial("tcp", lep.String())
+		if err != nil {
+			logger.ErrorField("ERROR.SSH", "Dial(local).MSG", fmt.Sprintf("Dial local  server.error:%s", err))
+			continue
+		}
+		go bridgeTunnel(client, local)
+	}
+	// return nil
 }

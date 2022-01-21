@@ -36,8 +36,12 @@ func main() {
 		logger.ErrorField("SSHRseTunnelCfg.Retrun.Error", "ERROR.MSG", fmt.Sprintf("SSH reverse tunnel get config failed :%v", err))
 		os.Exit(10)
 	}
-	service.SSHRTService(rtcfg.SshServerEndPoint, rtcfg.LocalEndPoint, rtcfg.SshForwardEndPoint)
-
+	err = service.SSHRTService(rtcfg.SshServerEndPoint, rtcfg.LocalEndPoint, rtcfg.SshForwardEndPoint)
+	if err != nil {
+		ERRORMSG := fmt.Sprintf(" SSHRTService After ..  reverse tunnel service failed:%v", err)
+		logger.ErrorField("SSH.SSHRTService", "ERROR", ERRORMSG)
+		os.Exit(11)
+	}
 	// logger.Log(logg.LevelInfo, "msg", "values-main")
 	// logger.Log(logg.LevelInfo, "msg", "values-test")
 	// logger.Log(logg.LevelDebug, "mgsbug", "vaule-bug")
