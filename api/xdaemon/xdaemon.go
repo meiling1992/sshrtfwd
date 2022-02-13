@@ -7,6 +7,7 @@ import (
 	"sshrts/api/logger"
 	"sshrts/api/single"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -46,6 +47,51 @@ func BackGround(logfile string, isExit bool) (*exec.Cmd, error) {
 	}
 	logger.InfoField("XDaemon-BackGround", "envIndex", strconv.Itoa(envIndex))
 	logger.InfoField("XDaemon-BackGround", "RunIndex", strconv.Itoa(RunIndex))
+	// 设置子进程环境变量
+	env := os.Environ()
+	logger.InfoField("XDaemon-BackGround", "RunIndex", fmt.Sprintf("ENV_NAME(%s)=RunIndex(%s)", ENV_NAME, RunIndex))
+
+	env = append(env, fmt.Sprintf("%s=%s", ENV_NAME, RunIndex))
+
+	NewSysProAttr := func() *syscall.SysProcAttr {
+		return &syscall.SysProcAttr{
+			HideWindow: true,
+		}
+	}
+	// 启动子进程
+	startProc := func(args, env []string, logFile string) (*exec.Cmd, error) {
+		cmd := &exec.Cmd{
+			Path:        args[0],
+			Args:        args,
+			Env:         env,
+			SysProcAttr: NewSysProAttr(),
+		}
+		if logFile != "" {
+			stdout, err := os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+			if err != nil {
+				logger.ErrorField("BackGround.ERROR", "OpenFile", fmt.Sprintf("error:%v", err))
+				return nil, err
+			}
+			cmd.Stderr = stdout
+			cmd.Stdout = stdout
+		}
+		err := cmd.Start()
+		if err != nil {
+			return nil, err
+		}
+		return cmd, nil
+	}
+	cmd, err := startProc(os.Args, env, logfile)
+	if err != nil {
+		logger.ErrorField("BackGround.ERROR", "child process ", fmt.Sprintf("error:%s", err))
+		return nil, err
+	} else {
+		logger.InfoField("BackGround", "Child Process (Success)", fmt.Sprintf("Pid(%v)-->Process(%v)", os.Getegid(), cmd.Process.Pid))
+	}
+	if isExit {
+		os.Exit(0)
+	}
+
 	return nil, nil
 }
 
